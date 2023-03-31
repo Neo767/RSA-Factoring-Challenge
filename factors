@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+
+CACHE_FILE=".cache"
+
+# check if number is already factorized and cached
+check_cache() {
+    local num=$1
+    if [ -f "$CACHE_FILE" ]; then
+        local factors=$(grep "^$num=" "$CACHE_FILE" | cut -d "=" -f 2)
+        if [ -n "$factors" ]; then
+            echo "$factors"
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# factorize number using Pollard's rho algorithm
+factorize() {
+    local num=$1
+    local x=2
+    local y=2
+    local d=1
+    while [ $d -eq 1 ]; do
+        x=$(( (x*x + 1) % num ))
+        y=$(( (y*y + 1) % num ))
+        y=$(( (y*y + 1) % num ))
+        d=$(gcd $((x > y ? x - y : y - x)) $num)
+    done
+    if [ $d -eq $num ]; then
+        # failed to factorize, use brute force method
+        factor $num | cut -d ":" -f 2 | sed -e 's/ //g'
+    else
+        # factorized successfully
+        echo "$d $((num / d))"
+    fi
+}
+
+# calculate greatest common divisor of two numbers
+gcd() {
+    local a=$1
+    local b=$2
+    while [ $b -ne 0 ]; do
+        local t=$b
+        b=$((a % b))
+        a=$t
+    done
+    echo $a
+}
+
+# factorize number into two smaller factors
+factor_number() {
+    local num=$1
+    local factors=$(check_cache $num)
+    if [ -n "$factors" ]; then
+        echo "$num=$factors"
+        return
+    fi
+    factors=$(factorize $num)
+    echo "$num=$factors" >> "$CACHE_FILE"
+    echo "$num=$factors"
+}
+
+# main program
+if [ $# -ne 1 ]; then
+    echo 'Usage: factors <file>'
+    exit 1
+fi
+
+#echo 'Usage: factors <file>'
+
+while read num; do
+    factor_number $num &
+done < "$1"
+
+# wait for all background processes to finish
+#wait
+sleep 2
+kill $(jobs -p) &>/dev/null

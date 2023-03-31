@@ -1,0 +1,11 @@
+#i!/usr/bin/env bash
+
+if [ $# -ne 1 ]
+then
+        echo 'Usage: rsa_factor <file>'
+        exit 1
+else
+        n=$(cat "$1")
+        factors=$(factor "$n" | awk '{print $2,x,$3}')
+        echo "$n=$factors"
+fi
